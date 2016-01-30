@@ -11,6 +11,8 @@ VERSION_MAJOR = 0
 VERSION_MINOR = 1
 VERSION_SMALL = 0
 
+STATES = list ()
+
 WEB_PATH = "http://www.lottonumbers.com/%s-lotto-results-%d.asp"
 YEARS = dict ()
 YEARS["illinois"] = [2009, 2010, 2011, 2012, 2013, 2014, 2015]
@@ -32,6 +34,12 @@ def printHelp ():
     print "      --ds      Download more data sets."
     print "-h, --help      Show this help message."
     print "-q, --quit      Quit the program.\n\n"
+
+class LottoSource (object):
+    def __init__ (self, state, code, years):
+        self.State = state
+        self.Code = code
+        self.Years = years
 
 # Class for storing data on a set of lotto data
 class LottoSet (object):
@@ -110,7 +118,12 @@ def readMaster ():
 
             # Place data into struct
             num.numbers =  [int (bottom[0]), int (bottom[1]), int (bottom[2]), int (bottom[3]), int (bottom[4]), int (bottom[5])]
-            num.extra = int (bottom[6])
+            
+            # If there is no extra shot
+            if num.numbers.count < 7:
+                num.extra = None
+            else:
+                num.extra = int (bottom[6])
             
             # Add current numbers to set list
             set.numbers.append (num)
@@ -235,10 +248,24 @@ def initTurtle (x, y):
 
     return (t)
 
+def initStates ():
+    STATES.append (LottoSource ("IL", "illinois-lotto", [2015, 2014, 2013, 2012, 2011, 2010, 2009]))
+    STATES.append (LottoSource ("NY", "new-york-lotto", [2015, 2014, 2013, 2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005,
+                                                         2004, 2003, 2002, 2001, 2000, 1999, 1998, 1997, 1996, 1995, 1994,
+                                                         1993, 1992, 1991, 1990, 1989, 1988, 1987, 1986, 1985, 1984, 1983,
+                                                         1982, 1981, 1980, 1979, 1978]))
+    STATES.append (LottoSource ("TX", "lotto-texas", [2015, 2014, 2013, 2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005, 
+                                                      2004, 2003, 2002, 2001, 2000, 1999, 1998, 1997, 1996, 1995, 1994, 
+                                                      1993, 1992]))
+    STATES.append (LottoSource ("FL", "florida-lotto", [2015, 2014, 2013, 2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005,
+                                                        2004, 2003, 2002, 2001, 2000, 1999, 1998, 1997, 1996, 1995, 1994,
+                                                        1993, 1992, 1991, 1990, 1989, 1988]))
+
+
 # Main entry
 if __name__ == "__main__":
     printHelp ()
-    __DEBUG__ = True
+    initStates ()
 
     if not checkDatafile ():
         print "A valid master has not been found."
@@ -268,6 +295,7 @@ if __name__ == "__main__":
     ds = False
     dsPickName = False
     ds_Pick_Date = False
+    ds_Choose = False
 
     # watchdog
     while (1):
@@ -302,9 +330,15 @@ if __name__ == "__main__":
 
                     # Begin acquisition
                     if arg == "Y" or arg == "YES":
-                        ds - False
-                        lotto = getPageData (WEB_PATH % ("illinois", 2014), lotto, LottoSet ("IL", 2014))
+                        ds == False
+                       # ds_Choose = True
+                        lotto = getPageData (WEB_PATH % ("illinois", 2012), lotto, LottoSet ("IL", 2012))
                         writeMaster (lotto)
+
+                        #print "Choose from which state you would like to download numbers.  You may choose the bottom option, if you wish to download all available data.\n"
+                        #print "[1] IL (Illinois)"
+                        #print "[2] NY (New York)"
+                        #print "[3] Download all"
                     elif arg == "N" or arg == "NO":
                         ds = False
                         print "Not downloadng.\n"
@@ -312,6 +346,19 @@ if __name__ == "__main__":
                         print "Valid arguments are either \"yes\" or \"no\"."
                     
                     break
+            # Flag is set for Choose download state (or download all)
+            if ds_Choose == True:
+                for arg in args:
+                    arg = arg.upper ()
+
+                    if arg == "1" or "IL":
+                        ds_Choose_Year = True
+                        ds_Choose = False
+                    elif arg == "2" or "NY":
+                        ds_Choose_Year = True
+                        ds_Choose = False
+                    else:
+                        print "Valid arguments are either item number or state acronym."
 
         except Exception, e:
             print e
