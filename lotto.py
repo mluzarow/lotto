@@ -92,7 +92,7 @@ def readMaster ():
         line = f.readline ()
 
         # Iterate through numbers
-        while line is not "\n":
+        while line != '\n':
             num = LottoNumber ()
 
             # Split the line into the date | month and numbers
@@ -118,13 +118,11 @@ def readMaster ():
             # Read next line
             line = f.readline ()
 
+        lotto.append (set)
     return (lotto)
 
 # Append new data to current master
 def writeMaster (lotto):
-    # Split set names by newline; content is now "state year"
-    sets = data[0].split ("\n")
-
     with open (APP_DATA_FOLDER + "/" + APP_DATA_MASTER, 'w') as f:
         # Iterate through the lotto sets
         for set in lotto:
@@ -141,10 +139,10 @@ def writeMaster (lotto):
 
                 # Write the extra number
                 f.write (str (num.extra) + "\n")
-
+            f.write ('\n')
     f.closed
 
-def parsePageData (parsedHTML):
+def parsePageData (parsedHTML, lotto, lottoSet):
     try:
         # Find all sets of lotto results
         data = parsedHTML.find_all ("div", "results")
@@ -153,40 +151,54 @@ def parsePageData (parsedHTML):
         header_comp = re.compile (".*\-lotto\-result\-[0-9]+\-[0-9]+\-[0-9]+.asp")
         header = parsedHTML.find_all (href=header_comp)
 
-        # Set up data dict
-        dic = dict ()
+        # Make a list for stroing all the lotto numbers
+        lottoNumberList = list ()
+        lottoSet.numbers = list ()
 
-        arrM = [] # Black array of arrays
         # Go through each set of lotto results
         for set in data:
-            # Make blank array of 7 values (7 numbers each)
-            arr = [0, 0, 0, 0, 0, 0, 0]
+            num = LottoNumber ()
+            num.numbers = list ()
 
             # Find each value
             set_r = set.find_all ("div", "result")
 
-            # Go through each value, parse it, add it to array
-            i = 0
+            # Go through each value, parse it, add it to list
             for s in set_r:
-                arr[i] = int (s.string)
-                i += 1
+                num.numbers.append (int (s.string))
 
-            # Add set data to dict, continue to next set
-            arrM.append (arr)
+            # Move extra shot to extra slot and remove from numbers
+            num.extra = num.numbers[6]
+            num.numbers.remove (num.numbers[6])
+
+            lottoNumberList.append (num)
 
         i = 0
         for head in header:
             # Split word byt spaces
             head = head.text.split (' ')
 
-            dic[head[1] + "." + head[2] + "." + head[3]] = arrM[i]
-            i += 1
+            for s in ["st", "nd", "rd", "th"]:
+                head[1] = head[1].replace (s, "")
 
-        return dic
+            # Add date to numbers
+            lottoNumberList[i].date = int (head[1])
+            # Add month to numbers
+            lottoNumberList[i].month = head[2]
+
+            # Add numbers to set
+            lottoSet.numbers.append (lottoNumberList[i])
+
+            i += 1
+        
+        # Add data set tp lotteSet
+        lotto.append (lottoSet)
+
+        return lotto
     except Exception, e:
         logging.warning (str(e.code))
 
-def getPageData (url):
+def getPageData (url, lotto, set):
     try:
         # Follow URL
         response = urllib2.urlopen (url)
@@ -195,7 +207,7 @@ def getPageData (url):
         # Spruce up the soup
         parsedHTML = BeautifulSoup (html, "lxml")
 
-        return (parsePageData (parsedHTML))
+        return (parsePageData (parsedHTML, lotto, set))
 
     except urllib2.HTTPError, e: # HTTP Error
         logging.warning ("HTTPError = %s" % str(e.code))
@@ -234,20 +246,22 @@ if __name__ == "__main__":
 
     # Check if master has data
     print "Master file found. Checking...\n"
+
     # Read master file
-    sets = readMaster ()
+    lotto = readMaster ()
 
     print "Master has the following data sets:"
 
         # Master has no data, do nothing
-    if sets == None:
+    if lotto == None:
+        lotto = list ()
         print "No data sets found.\n"
                 
     # Master has data, print it
     else:
         i = 1
-        for set in sets:
-            print "[%d] %s" % (i, set)
+        for set in lotto:
+            print "[%d] %s %d" % (i, set.state, set.year)
             i += 1
 
     # Flag init
@@ -275,7 +289,7 @@ if __name__ == "__main__":
                     sys.exit (0)
 
                 # [--ds]
-                if arg == "--ds":
+                if arg == "--ds" and ds is not True:
                     ds = True
                     print "Would you like to download more data sets?\n"
                 else:
@@ -289,8 +303,8 @@ if __name__ == "__main__":
                     # Begin acquisition
                     if arg == "Y" or arg == "YES":
                         ds - False
-                        data = getPageData (WEB_PATH % ("illinois", 2015))
-                        writeMaster (data, "liinois")
+                        lotto = getPageData (WEB_PATH % ("illinois", 2014), lotto, LottoSet ("IL", 2014))
+                        writeMaster (lotto)
                     elif arg == "N" or arg == "NO":
                         ds = False
                         print "Not downloadng.\n"
