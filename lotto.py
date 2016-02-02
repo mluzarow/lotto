@@ -400,9 +400,6 @@ if __name__ == "__main__":
 
     # Flag init
     ds = False
-    dsPickName = False
-    ds_Pick_Date = False
-    ds_Choose = False
 
     # watchdog
     while (1):
@@ -424,56 +421,6 @@ if __name__ == "__main__":
                 dsGetDownloadInfo (lotto)
             else:
                 continue
-
-            # ds flag is set for download for sets
-            if ds == True:
-                for arg in args:    
-                    arg = arg.upper ()
-
-                    # Begin acquisition
-                    if arg == "Y" or arg == "YES":
-                        ds == False
-                        ds_Choose = True
-
-                        # List all available states
-                        i = 0
-                        for state in STATES:
-                            print "[%d] %s" % (i, state.State)
-                            i += 1
-
-                        # Add option to download all states
-                        print "[%d] Download all\n" % i
-
-                        # Choose the state
-                        state = dsChooseState (args[0])
-                       # ds_Choose = True
-                        #lotto = getPageData (WEB_PATH % ("illinois", 2012), lotto, LottoSet ("IL", 2012))
-                        #writeMaster (lotto)
-                    elif arg == "N" or arg == "NO":
-                        ds = False
-                        print "Not downloadng.\n"
-                    
-                    break
-            # Flag is set for Choose download state (or download all)
-            if ds_Choose == True:
-                for arg in args:
-                    arg = arg.upper ()
-                    
-                    i = 0
-                    for state in STATES:
-                        print "[%d] %s" % (i, state.State)
-                        i += 1
-
-                    print "[%d] Download All" % i
-
-                    if arg == "1":
-                        ds_Choose_Year = True
-                        ds_Choose = False
-                    elif arg == "2" or "NY":
-                        ds_Choose_Year = True
-                        ds_Choose = False
-                    else:
-                        print "Valid arguments are either item number."
 
         except Exception, e:
             print e
