@@ -14,27 +14,19 @@ VERSION_SMALL = 0
 STATES = list ()
 
 WEB_PATH = "http://www.lottonumbers.com/%s-results-%d.asp"
-YEARS = dict ()
-YEARS["illinois"] = [2009, 2010, 2011, 2012, 2013, 2014, 2015]
-
 
 APP_DATA_FOLDER = "Lotto Data"
 APP_DATA_MASTER = "Master"
 #endregion Defines
 
-#region Public vars
-
-#endregion Public Vars
-
 # Print help text
-def printHelp ():
-    print "Lotto thing - V%d.%d.%d\n" % (VERSION_MAJOR, VERSION_MINOR, VERSION_SMALL)
-    print "\nUsage: [-h] lotto.py"
+def printHelp (): 
     print "Arguments:"
     print "      --ds      Download more data sets."
     print "-h, --help      Show this help message."
     print "-q, --quit      Quit the program.\n\n"
 
+#region Classes
 class LottoSource (object):
     def __init__ (self, state, code, years):
         self.State = state
@@ -48,8 +40,29 @@ class LottoSet (object):
        self.year = year
        self.numbers = numbers
 
-   def listNumberbyFrequency (self):
-        pass
+   def getLargestNumber (self):
+        # Return None if numbers have not been filled yet
+        if len (self.numbers) <= 0:
+            return (None)
+
+        bNum = 0
+        for num in self.numbers:
+            if num > bNum:
+                bNum = num
+
+        return (bNum)
+
+   def getSmallestNumber (self):
+        # Return None if numbers have not been filled yet
+        if len (self.numbers) <= 0:
+            return (None)
+
+        sNum = 100
+        for num in self.numbers:
+            if num < sNum:
+                sNum = num
+
+        return (sNum)
 # Class for storing data on specific numbers draw on a day
 class LottoNumber (object):
     def __init__ (self, date=None, month=None, numbers=None, extra=None):
@@ -57,7 +70,17 @@ class LottoNumber (object):
         self.month = month
         self.numbers = numbers
         self.extra = extra
+#endregion Classes
 
+#region File IO
+#####################################################################################################################
+## Check that save directory and master file exits.  If not, make them.                                            ##
+##                                                                                                                 ##
+## -> None                                                                                                         ##
+##                                                                                                                 ##
+## <- Bool : If master file exists, return True.                                                                   ##
+##    Bool : If master file does not exist, return False                                                           ##
+#####################################################################################################################
 def checkDatafile ():
     # Check for the directory
     if not os.path.exists (APP_DATA_FOLDER):
@@ -74,69 +97,87 @@ def checkDatafile ():
         return (False)
     return (True)
 
-# Read the master file, load data into memory for useage
+#####################################################################################################################
+## Read data in the master file into LottoSets and place into mew lotto list.                                      ##
+##                                                                                                                 ##
+## -> None                                                                                                         ##
+##                                                                                                                 ##
+## <- List lotto : The list of all LottoSet classes from this save file.                                           ##
+##    NoneType : If master has tag "1234", returns None.                                                           ##
+#####################################################################################################################
 def readMaster ():
     flc = True
     lotto = list ()
+    line = "\n"
 
     with open (APP_DATA_FOLDER + "/" + APP_DATA_MASTER, 'r') as f:
-        set = LottoSet ()
+        while line != "":
+            set = LottoSet ()
 
-        set.numbers = list ()
+            set.numbers = list ()
 
-        # Read header
-        line = f.readline ()
+            # Read header
+            if line == "\n":
+                line = f.readline ()
 
-        # Check the first line of the master for fresh file trigger
-        if flc:
-            flc = False
-            if line == "1234":
-                f.closed
-                return (None)
+            # Check the first line of the master for fresh file trigger
+            if flc:
+                flc = False
+                if line == "1234":
+                    f.closed
+                    return (None)
 
-        # Read header
-        line = line.split (' ')
-        set.state = line[0]
-        set.year = int (line[1])
+            # Read header
+            line = line.split (' ')
+            set.state = line[0]
+            set.year = int (line[1])
 
-        line = f.readline ()
-
-        # Iterate through numbers
-        while line != '\n':
-            num = LottoNumber ()
-
-            # Split the line into the date | month and numbers
-            line = line.split (':')
-
-            # Slipt top in date and month
-            top = line[0].split ('|')
-
-            # Place data into struct
-            num.date = int (top[0].strip (' '))
-            num.month = top[1].strip (' ')
-
-            # Split numbers into seperate numbers
-            bottom = line[1].split (';')
-
-            # Place data into struct
-            num.numbers =  [int (bottom[0]), int (bottom[1]), int (bottom[2]), int (bottom[3]), int (bottom[4]), int (bottom[5])]
-            
-            # If there is no extra shot
-            if num.numbers.count < 7:
-                num.extra = None
-            else:
-                num.extra = int (bottom[6])
-            
-            # Add current numbers to set list
-            set.numbers.append (num)
-
-            # Read next line
             line = f.readline ()
 
-        lotto.append (set)
+            # Iterate through numbers
+            while line != '\n':
+                num = LottoNumber ()
+
+                # Split the line into the date | month and numbers
+                line = line.split (':')
+
+                # Slipt top in date and month
+                top = line[0].split ('|')
+
+                # Place data into struct
+                num.date = int (top[0].strip (' '))
+                num.month = top[1].strip (' ')
+
+                # Split numbers into seperate numbers
+                bottom = line[1].split (';')
+
+                # Place data into struct
+                num.numbers =  [int (bottom[0]), int (bottom[1]), int (bottom[2]), int (bottom[3]), int (bottom[4]), int (bottom[5])]
+            
+                # If there is no extra shot
+                if num.numbers.count < 7:
+                    num.extra = None
+                else:
+                    num.extra = int (bottom[6])
+            
+                # Add current numbers to set list
+                set.numbers.append (num)
+
+                # Read next line
+                line = f.readline ()
+
+            lotto.append (set)
+            line = f.readline ()
+
     return (lotto)
 
-# Append new data to current master
+#####################################################################################################################
+## Overwrite the master file with all data currently in the lotto list.                                            ##
+##                                                                                                                 ##
+## -> List lotto : The list of all LottoSet classes from the save file and from page requests this session.        ##
+##                                                                                                                 ##
+## <- None                                                                                                         ##
+#####################################################################################################################
 def writeMaster (lotto):
     with open (APP_DATA_FOLDER + "/" + APP_DATA_MASTER, 'w') as f:
         # Iterate through the lotto sets
@@ -156,7 +197,17 @@ def writeMaster (lotto):
                 f.write (str (num.extra) + "\n")
             f.write ('\n')
     f.closed
+#endregion File IO
 
+#####################################################################################################################
+## Read spruced soup and place data into LottoSets, which are added to the lotto list.                             ##
+##                                                                                                                 ##
+## -> BeautifulSoup parsedHTML : Spruced soup.                                                                     ##
+## -> List lotto : The list of all LottoSet classes from the save file and for future data from this page.         ##  
+## -> LottoSet set : A LottoSet set of lotto data that the numbers will go into.                                   ##
+##                                                                                                                 ##
+## <- List lotto: The updated lotto list.                                                                          ##
+#####################################################################################################################
 def parsePageData (parsedHTML, lotto, lottoSet):
     try:
         # Find all sets of lotto results
@@ -214,6 +265,15 @@ def parsePageData (parsedHTML, lotto, lottoSet):
     except Exception, e:
         logging.warning (str(e.code))
 
+#####################################################################################################################
+## Gets the spruced up page data from the given link, sends to parsePageData.                                      ##
+##                                                                                                                 ##
+## -> String url : The URL that will be followed.                                                                  ##
+## -> List lotto : The list of all LottoSet classes from the save file and for future data from this page.         ##  
+## -> LottoSet set : A LottoSet set of lotto data that the numbers will go into.                                   ##
+##                                                                                                                 ##
+## <- List : The updated lotto list.                                                                               ##
+#####################################################################################################################
 def getPageData (url, lotto, set):
     try:
         # Follow URL
@@ -237,13 +297,21 @@ def getPageData (url, lotto, set):
 
 #region Console Control
 #region DS
-def dsGetYear (ls, lotto):
+#####################################################################################################################
+## Asks the user which of the state's valid years they would like to download lotto data from.                     ##
+##                                                                                                                 ##
+## -> LottoSource ls : Data regarding the chosen state (name, link, year list).                                    ##
+##                                                                                                                 ##
+## <- Tuple (String WEB_PATH, : Constructed string link for connecting to the requested page.                      ##
+##           LottoSet) : Lotto set data to be sent to be filled with number data                                   ##
+#####################################################################################################################
+def dsGetYear (ls):
     numYears = len (ls.Years)
     print "The following arae all the valid years with lotta data for the state [%s]. Select a year from the list by entering the number to the left of the entry.  You can also select %d in order to download all available data.\n" % (ls.State, numYears)
 
     i = 0
     for year in ls.Years:
-        print "[%d %d" % (i, year)
+        print "[%d] %d" % (i, year)
         i += 1
 
     print "[%d] Download all\n" % numYears
@@ -264,9 +332,18 @@ def dsGetYear (ls, lotto):
         if int (arg) >= numYears or int (arg) < 0:
             continue
 
-        lotto = getPageData (WEB_PATH % (ls.Code, ls.Years[int (arg)]), lotto, LottoSet (ls.State, ls.Years[int (arg)]))
+        return ((WEB_PATH % (ls.Code, ls.Years[int (arg)]), LottoSet (ls.State, ls.Years[int (arg)])))
 
-def dsGetState (lotto):
+        #lotto = getPageData (WEB_PATH % (ls.Code, ls.Years[int (arg)]), lotto, LottoSet (ls.State, ls.Years[int (arg)]))
+
+#####################################################################################################################
+## Asks the user which of state from the STATES list they would like to download lotto data for.                   ##
+##                                                                                                                 ##
+## -> None                                                                                                         ##
+##                                                                                                                 ##
+## <- Tuple  (from dsGetYear)                                                                                      ##
+#####################################################################################################################
+def dsGetState ():
     numStates = len (STATES)
     print "The following are all the valid states with lotto data.  Select a state from the list by entering the number to the left of the entry.  You can also select %d in order to download all available data.\n" % numStates
 
@@ -293,9 +370,16 @@ def dsGetState (lotto):
         if int (arg) >= numStates or int (arg) < 0:
             continue
 
-        dsGetYear (STATES[int (arg)], lotto)
+        return (dsGetYear (STATES[int (arg)]))
 
-def dsGetDownloadInfo (lotto):
+#####################################################################################################################
+## Asks the user if they wish the download data, getting input from getInput ().                                   ##
+##                                                                                                                 ##
+## -> None                                                                                                         ##
+##                                                                                                                 ##
+## <- Tuple  (from dsGetState, dsGetYear)                                                                          ##
+#####################################################################################################################
+def dsGetDownloadInfo ():
     print "\nDownload additional data sets? [y/n]"
 
     while (1):
@@ -303,7 +387,7 @@ def dsGetDownloadInfo (lotto):
 
         # Check for Y or N
         if arg == "Y" or arg == "YES":
-            dsGetState (lotto)
+            return (dsGetState ())
         elif arg == "N" or arg == "NO":
             print "Not downloading...\n"
             return
@@ -311,6 +395,14 @@ def dsGetDownloadInfo (lotto):
             continue
 #endregion DE
 
+#####################################################################################################################
+## Gets data from the user via the console.                                                                        ##
+##                                                                                                                 ##
+## -> Bool upperize : Flag for changing the input text to upper case before returning.  Default to False.          ##
+##                                                                                                                 ##
+## <- String args[0] : The input data from the user.                                                               ##
+##    NoneType : If argument is -h or --help, returns None.                                                        ##
+#####################################################################################################################
 def getInput (upperize = False):
     # Get user input and split it by ' '
     args = raw_input (">")
@@ -389,17 +481,21 @@ def initLotto ():
         for set in lotto:
             print "[%d] %s %d" % (i, set.state, set.year)
             i += 1
+
+    return (lotto)
 #endregion Initialization
 
 # Main entry
 if __name__ == "__main__":
+    # Print program version
+    print "Lotto thing - V%d.%d.%d\n" % (VERSION_MAJOR, VERSION_MINOR, VERSION_SMALL)
+
+    # Print the help menu
     printHelp ()
+    # Initialize the States
     initStates ()
     # Read the saved data into memory and show user what exists
     lotto = initLotto ()
-
-    # Flag init
-    ds = False
 
     # watchdog
     while (1):
@@ -418,7 +514,9 @@ if __name__ == "__main__":
                 sys.exit (0)
             # [--ds]
             elif arg == "--ds":
-                dsGetDownloadInfo (lotto)
+                (path, set) = dsGetDownloadInfo ()
+                lotto = getPageData (path, lotto, set)
+                writeMaster (lotto)
             else:
                 continue
 
