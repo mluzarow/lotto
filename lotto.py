@@ -72,6 +72,53 @@ class LottoNumber (object):
         self.extra = extra
 #endregion Classes
 
+#region Analysis
+#####################################################################################################################
+## Makes a dictionary of all valid lotto numbers paired with their frequency of occurance.                         ##
+##                                                                                                                 ##
+## -> List lotto : The list of all LottoSet classes from the save file and from page requests this session.        ##
+## -> Bool extra : Flag for including extra shot numbers in the analysis. Default False.                           ##
+##                                                                                                                 ##
+## <- Dict dic : Dictionary of lotto numbers and their frequency of occurance.                                     ##
+#####################################################################################################################
+def findNumberFrequency (lotto, extra=False):
+    dic = dict ()
+
+    for set in lotto:
+        for nums in set.numbers:
+            for num in nums.numbers:
+                if dic.has_key (num):
+                    dic[num] += 1
+                else:
+                    dic[num] = 1
+
+    return (dic)
+
+#####################################################################################################################
+## Makes a dictionary of all lotto dates paired with the average value of that date.                               ##
+##                                                                                                                 ##
+## -> List lotto : The list of all LottoSet classes from the save file and from page requests this session.        ##
+##                                                                                                                 ##
+## <- Dict dic : Dictionary of lotto dates and their number averages.                                              ##
+#####################################################################################################################
+def findAverageValues (lotto):
+    dic = dict ()
+
+    for set in lotto:
+        for nums in set.numbers:
+            total = 0
+            for num in nums.numbers:
+                total += num
+
+            total /= 6
+
+            s = set.state + " " + nums.month + " " + str (nums.date) + " " + str (set.year)
+            dic[s] = total
+
+    return (dic)
+
+#endregion Analysis
+
 #region File IO
 #####################################################################################################################
 ## Check that save directory and master file exits.  If not, make them.                                            ##
@@ -199,6 +246,7 @@ def writeMaster (lotto):
     f.closed
 #endregion File IO
 
+#region Web
 #####################################################################################################################
 ## Read spruced soup and place data into LottoSets, which are added to the lotto list.                             ##
 ##                                                                                                                 ##
@@ -294,6 +342,7 @@ def getPageData (url, lotto, set):
     except Exception, e:
         logging.warning ("Something happened: %s" % e)
         return (None)
+#endregion Web
 
 #region Console Control
 #region DS
@@ -444,19 +493,35 @@ def initTurtle (x, y):
 
     return (t)
 
+#####################################################################################################################
+## Initializes state informations regarding links to lottonumbers.com using global variable STATES.                ##
+##                                                                                                                 ##
+## -> None                                                                                                         ##
+##                                                                                                                 ##
+## <- None                                                                                                         ##
+#####################################################################################################################
 def initStates ():
     STATES.append (LottoSource ("Illinois", "illinois-lotto", [2015, 2014, 2013, 2012, 2011, 2010, 2009]))
-    STATES.append (LottoSource ("New York", "new-york-lotto", [2015, 2014, 2013, 2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005,
-                                                         2004, 2003, 2002, 2001, 2000, 1999, 1998, 1997, 1996, 1995, 1994,
-                                                         1993, 1992, 1991, 1990, 1989, 1988, 1987, 1986, 1985, 1984, 1983,
-                                                         1982, 1981, 1980, 1979, 1978]))
-    STATES.append (LottoSource ("Texas", "lotto-texas", [2015, 2014, 2013, 2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005, 
-                                                      2004, 2003, 2002, 2001, 2000, 1999, 1998, 1997, 1996, 1995, 1994, 
-                                                      1993, 1992]))
-    STATES.append (LottoSource ("Florida", "florida-lotto", [2015, 2014, 2013, 2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005,
-                                                        2004, 2003, 2002, 2001, 2000, 1999, 1998, 1997, 1996, 1995, 1994,
-                                                        1993, 1992, 1991, 1990, 1989, 1988]))
+    STATES.append (LottoSource ("New York", "new-york-lotto", [2015, 2014, 2013, 2012, 2011, 2010, 2009, 2008, 2007,
+                                                               2006, 2005, 2004, 2003, 2002, 2001, 2000, 1999, 1998,
+                                                               1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990, 1989,
+                                                               1988, 1987, 1986, 1985, 1984, 1983, 1982, 1981, 1980,
+                                                               1979, 1978]))
+    STATES.append (LottoSource ("Texas", "lotto-texas", [2015, 2014, 2013, 2012, 2011, 2010, 2009, 2008, 2007, 2006,
+                                                         2005, 2004, 2003, 2002, 2001, 2000, 1999, 1998, 1997, 1996,
+                                                         1995, 1994, 1993, 1992]))
+    STATES.append (LottoSource ("Florida", "florida-lotto", [2015, 2014, 2013, 2012, 2011, 2010, 2009, 2008, 2007,
+                                                             2006, 2005, 2004, 2003, 2002, 2001, 2000, 1999, 1998,
+                                                             1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990, 1989,
+                                                             1988]))
 
+#####################################################################################################################
+## Initializes important constants and makes sure the save file exists.                                            ##
+##                                                                                                                 ##
+## -> None                                                                                                         ##
+##                                                                                                                 ##
+## <- List lotto :  The list of all LottoSet classes from the save file.                                           ##
+#####################################################################################################################
 def initLotto ():
     # Check that the data file exists
     if not checkDatafile ():
@@ -517,6 +582,14 @@ if __name__ == "__main__":
                 (path, set) = dsGetDownloadInfo ()
                 lotto = getPageData (path, lotto, set)
                 writeMaster (lotto)
+            elif arg == "--gf":
+                dic = findNumberFrequency (lotto)
+                for (key, value) in dic.iteritems ():
+                    print "%d : %d" % (key, value)
+            elif arg == "--findAvg":
+                dic = findAverageValues (lotto)
+                for (key, value) in dic.iteritems ():
+                    print "%s : %d" % (key, value)
             else:
                 continue
 
