@@ -93,6 +93,28 @@ def findNumberFrequency (lotto, extra=False):
                     dic[num] = 1
 
     return (dic)
+def printNumberFrequency (dic):
+    print "Displaying frequency of numbers in the current data sets.\n"
+    l = list ()
+    i = 0
+    t = list ()
+
+    for (key, value) in dic.iteritems (): 
+        t.append ("[%1.d : %1.d]" % (key, value))
+        i += 1
+
+        if i == 10:
+            l.append (t)
+            t = list ()
+            i = 0
+
+    l.append (t)
+
+    size = len (l)
+    for thing in l:
+        for i in range (0, size):
+            print thing[i] + " ",
+        print ""
 
 #####################################################################################################################
 ## Makes a dictionary of all lotto dates paired with the average value of that date.                               ##
@@ -117,6 +139,37 @@ def findAverageValues (lotto):
 
     return (dic)
 
+def findWebbing (lotto):
+    dic = dict ()
+
+    for set in lotto:
+        for nums in set.numbers:
+            for num in nums.numbers:
+                temp = list ()
+
+                # For each number, check it against every other number in the numbers
+                for checknum in nums.numbers:
+                    # Dont web the same number to itself
+                    if checknum == num:
+                        continue
+
+                    comp = sorted ([num, checknum])
+                    tup = (comp[0], comp[1])
+
+                    # If item was already compared on this number set, continue
+                    for item in temp:
+                        if item == tup:
+                            continue
+
+                    temp.append (tup)
+
+                    if dic.has_key (tup):
+                        dic[tup] += 1
+                    else:
+                        dic[tup] = 1
+
+    return (dic)
+                
 #endregion Analysis
 
 #region File IO
@@ -281,9 +334,10 @@ def parsePageData (parsedHTML, lotto, lottoSet):
             for s in set_r:
                 num.numbers.append (int (s.string))
 
-            # Move extra shot to extra slot and remove from numbers
-            num.extra = num.numbers[6]
-            num.numbers.remove (num.numbers[6])
+            if len (num.numbers) > 6:
+                # Move extra shot to extra slot and remove from numbers
+                num.extra = num.numbers[6]
+                num.numbers.remove (num.numbers[6])
 
             lottoNumberList.append (num)
 
@@ -444,6 +498,20 @@ def dsGetDownloadInfo ():
             continue
 #endregion DE
 
+def listSets (lotto):
+    for set in lotto:
+        print "%s %d" % (set.state, set.year)
+        for nums in set.numbers:
+            print nums.month + " " + str (nums.date) + " : " + str (nums.numbers) + " E " + str (nums.extra)
+
+def showSets (lotto):
+    i = 1
+    for set in lotto:
+        print "[%d] %s %d" % (i, set.state, set.year)
+        i += 1
+
+    print ""
+
 #####################################################################################################################
 ## Gets data from the user via the console.                                                                        ##
 ##                                                                                                                 ##
@@ -577,17 +645,25 @@ if __name__ == "__main__":
             # [-q] | [--quit]
             elif arg == "-q" or arg == "quit":
                 sys.exit (0)
-            # [--ds]
+            # [--ls] List Sets
+            elif arg == "--ls":
+                listSets (lotto)
+            elif arg == "--ss":
+                showSets (lotto)
+            # [--ds] Download Sets
             elif arg == "--ds":
                 (path, set) = dsGetDownloadInfo ()
                 lotto = getPageData (path, lotto, set)
                 writeMaster (lotto)
             elif arg == "--gf":
                 dic = findNumberFrequency (lotto)
-                for (key, value) in dic.iteritems ():
-                    print "%d : %d" % (key, value)
+                printNumberFrequency (dic)
             elif arg == "--findAvg":
                 dic = findAverageValues (lotto)
+                for (key, value) in dic.iteritems ():
+                    print "%s : %d" % (key, value)
+            elif arg == "--findWeb":
+                dic = findWebbing (lotto)
                 for (key, value) in dic.iteritems ():
                     print "%s : %d" % (key, value)
             else:
