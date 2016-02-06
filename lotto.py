@@ -5,6 +5,8 @@ import os # Dealing with the OS
 import sys # Exit
 import logging # Error logging
 import re # Minor text parsing
+from colorama import init
+from colorama import Fore, Back, Style
 
 #region Defines
 VERSION_MAJOR = 0
@@ -93,6 +95,7 @@ def findNumberFrequency (lotto, extra=False):
                     dic[num] = 1
 
     return (dic)
+
 def printNumberFrequency (dic):
     print "Displaying frequency of numbers in the current data sets.\n"
     l = list ()
@@ -100,7 +103,7 @@ def printNumberFrequency (dic):
     t = list ()
 
     for (key, value) in dic.iteritems (): 
-        t.append ("[%1.d : %1.d]" % (key, value))
+        t.append ("[%2.d : %2.d]" % (key, value))
         i += 1
 
         if i == 10:
@@ -108,13 +111,22 @@ def printNumberFrequency (dic):
             t = list ()
             i = 0
 
+    size = len (t)
+
+    # Fill in the rest of the spots with none
+    for i in range (0, 10 - size):
+        t.append (None)
+
     l.append (t)
 
     size = len (l)
-    for thing in l:
+    for j in range (0, 10):
         for i in range (0, size):
-            print thing[i] + " ",
-        print ""
+            if l[i][j] == None:
+                print "",
+            else:
+                print l[i][j] + " ",
+        print "\n"
 
 #####################################################################################################################
 ## Makes a dictionary of all lotto dates paired with the average value of that date.                               ##
@@ -169,7 +181,36 @@ def findWebbing (lotto):
                         dic[tup] = 1
 
     return (dic)
-                
+
+def printWebbing (dic):
+    iter = 0
+    l = list ()
+    t = list ()
+    MAX_VAL = 250
+
+    for i in range (1, 53):
+        for j in range (1, 53):
+            if dic.has_key ((i, j)):
+               t.append ("(%2.d - %2.d) : %2.d" % (i, j, dic[(i, j)]))
+               iter += 1
+
+            if iter >= MAX_VAL:
+                if len(t) < MAX_VAL:
+                    for i in range (MAX_VAL - len(t), MAX_VAL):
+                        t.append (None)
+                l.append (t)
+                t = list ()
+                iter = 0
+
+    for i in range (0, MAX_VAL):
+        for j in range (0, len (l)):
+            if l[j][i] == None:
+                print "",
+            else:
+                print l[j][i] + " ",
+        print ""
+    print "\n"
+
 #endregion Analysis
 
 #region File IO
@@ -620,6 +661,8 @@ def initLotto ():
 
 # Main entry
 if __name__ == "__main__":
+    init (autoreset=True) # Colorama init
+
     # Print program version
     print "Lotto thing - V%d.%d.%d\n" % (VERSION_MAJOR, VERSION_MINOR, VERSION_SMALL)
 
@@ -664,8 +707,7 @@ if __name__ == "__main__":
                     print "%s : %d" % (key, value)
             elif arg == "--findWeb":
                 dic = findWebbing (lotto)
-                for (key, value) in dic.iteritems ():
-                    print "%s : %d" % (key, value)
+                printWebbing (dic)
             else:
                 continue
 
