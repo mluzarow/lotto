@@ -24,7 +24,12 @@ APP_DATA_MASTER = "Master"
 # Print help text
 def printHelp (): 
     print "Arguments:"
+    print "      --ss      Show all Downloaded sets."
+    print "      --ls      Show all data in all sets."
     print "      --ds      Download more data sets."
+    print "      --ff      Find Frequency of numbers in sets."
+    print "      --fa      Find average of numbers in sets."
+    print "      --fw      Find coupling data about numbers in sets."
     print "-h, --help      Show this help message."
     print "-q, --quit      Quit the program.\n\n"
 
@@ -96,6 +101,13 @@ def findNumberFrequency (lotto, extra=False):
 
     return (dic)
 
+#####################################################################################################################
+## Prints number frequencies in a small horizontal list.                                                           ##
+##                                                                                                                 ##
+## -> Dict dic : Dictionary of lotto numbers and their frequency of occurance.                                     ##
+##                                                                                                                 ##
+## <- None                                                                                                         ##
+#####################################################################################################################
 def printNumberFrequency (dic):
     print "Displaying frequency of numbers in the current data sets.\n"
     l = list ()
@@ -151,65 +163,120 @@ def findAverageValues (lotto):
 
     return (dic)
 
+#####################################################################################################################
+## Makes a large list regarding how different numbers are linked together.                                         ##
+##                                                                                                                 ##
+## -> List lotto : The list of all LottoSet classes from the save file and from page requests this session.        ##
+##                                                                                                                 ##
+## <- Dict dic : Dictionary of number pairs and their frequency of occurance.                                      ##
+#####################################################################################################################
 def findWebbing (lotto):
     dic = dict ()
+
+    maxNumber = 53 # Biggest possible number
+    for n1 in range (1, maxNumber):
+        for n2 in range (n1 + 1, maxNumber):
+            dic[(n1, n2)] = 0
 
     for set in lotto:
         for nums in set.numbers:
             for num in nums.numbers:
-                temp = list ()
 
-                # For each number, check it against every other number in the numbers
+                ## For each number, check it against every other number in the numbers
                 for checknum in nums.numbers:
-                    # Dont web the same number to itself
-                    if checknum == num:
-                        continue
-
+                    # Make sure tuple is (low val, high val)
                     comp = sorted ([num, checknum])
                     tup = (comp[0], comp[1])
 
-                    # If item was already compared on this number set, continue
-                    for item in temp:
-                        if item == tup:
-                            continue
-
-                    temp.append (tup)
-
+                    # Add one to tuple freq
                     if dic.has_key (tup):
                         dic[tup] += 1
-                    else:
-                        dic[tup] = 1
 
     return (dic)
 
+#####################################################################################################################
+## Prints a long list of the number pair and it's frequency of occurance.  List is split in order to fit into      ##
+##   the Windows console buffer.  ==More== displays on the screen when the buffer is full.  Pressing any button    ##
+##   will continue printing and freely remove past values from the buffer.                                         ##
+##                                                                                                                 ##
+## -> Dict dic : Dictionary of number pairs and their frequency of occurance.                                      ##
+##                                                                                                                 ##
+## <- None                                                                                                         ##
+#####################################################################################################################
 def printWebbing (dic):
     iter = 0
     l = list ()
     t = list ()
-    MAX_VAL = 250
+    MAX_VAL = 270
 
-    for i in range (1, 53):
-        for j in range (1, 53):
-            if dic.has_key ((i, j)):
-               t.append ("(%2.d - %2.d) : %2.d" % (i, j, dic[(i, j)]))
-               iter += 1
-
+    maxNumber = 53 # Biggest possible number
+    for n1 in range (1, maxNumber):
+        for n2 in range (n1 + 1, maxNumber):
+            if dic.has_key ((n1, n2)):
+                t.append ("(%2.d - %2.d) : %2.d" % (n1, n2, dic[(n1, n2)]))
+                iter += 1
+            
+            # If iter is >= MAX_VAL, a new column should be started
             if iter >= MAX_VAL:
+                # If column is not full, pad with Nones
                 if len(t) < MAX_VAL:
                     for i in range (MAX_VAL - len(t), MAX_VAL):
                         t.append (None)
                 l.append (t)
                 t = list ()
                 iter = 0
+    # Make sure the last non-filled column is appended to l and filled
+    if len(t) < MAX_VAL:
+        for i in range (MAX_VAL - len(t), MAX_VAL):
+            t.append (None)
+        l.append (t)
 
+    # Print out columns
     for i in range (0, MAX_VAL):
         for j in range (0, len (l)):
             if l[j][i] == None:
-                print "",
+                print "               ",
             else:
                 print l[j][i] + " ",
-        print ""
+        #print ""
+        # More at halfway point
+        if i == MAX_VAL / 2:
+            print "===================================== More ====================================="
+            while (1):
+                # Ask for the input and throw it away
+                raw_input ()
+                break
     print "\n"
+
+#####################################################################################################################
+## Uses findWeb data in order to draw relationships on a Turtle canvas.                                            ##
+##                                                                                                                 ##
+## -> Dict dic : Dictionary of number pairs and their frequency of occurance.                                      ##
+##                                                                                                                 ##
+## <- None                                                                                                         ##
+#####################################################################################################################
+def drawWebbing (dic):
+    t = initTurtle (400, 400)
+    xDiv = 200 / 10
+    yDiv = 200 / 5
+
+    x = 200
+    y = 200
+    n = 1
+    while (y < 200):
+        while (x < 200):
+            t.penup ()
+            t.setposition (x, y)
+            t.pendown ()
+            t.write (str (n), ("Arial", 12, "normal"))
+            n += 1
+            x += xDiv
+        x = 0
+        y += yDiv
+
+
+    turtle.done ()
+
 
 #endregion Analysis
 
@@ -356,6 +423,8 @@ def parsePageData (parsedHTML, lotto, lottoSet):
         data = parsedHTML.find_all ("div", "results")
         
         # Find all lotto result headers
+        # NTS I don't understand why Beautiful Soup cannot find tags with links in them; it's the only thing
+        #   it seems to have trouble with.  Using regex instead.
         header_comp = re.compile (".*\-lotto\-result\-[0-9]+\-[0-9]+\-[0-9]+.asp")
         header = parsedHTML.find_all (href=header_comp)
 
@@ -586,15 +655,23 @@ def getInput (upperize = False):
 #endregion Console Control
 
 #region Initialization
-# Initialize Turtle turtle
+#####################################################################################################################
+## Initialize Turtle for turtle drawing                                                                            ##
+##                                                                                                                 ##
+## -> Int x : The x-ax-s size of the graphics window / canvas.                                                     ##
+## -> Int y : The y-axis size of the graphics window / canvas.                                                     ##
+##                                                                                                                 ##
+## <- Turtle t : Graphics object storing graphics settings.                                                        ##
+#####################################################################################################################
 def initTurtle (x, y):
     # Wake the turtle
     t = turtle.Turtle ()
     # Max turtle speed
     t.speed (0)
-    t.setup (x, y)
+    turtle.setup (x, y, 0, 0)
     # Create turtle playground
-    t.screen.screensize (x, y)
+    #t.screen.screensize (x, y)
+    #turtle.setworldcoordinates(0, y, x, 0)
     # Hide turtle head
     t.hideturtle ()
     # Hide turtle animations
@@ -611,7 +688,7 @@ def initTurtle (x, y):
 #####################################################################################################################
 def initStates ():
     STATES.append (LottoSource ("Illinois", "illinois-lotto", [2015, 2014, 2013, 2012, 2011, 2010, 2009]))
-    STATES.append (LottoSource ("New York", "new-york-lotto", [2015, 2014, 2013, 2012, 2011, 2010, 2009, 2008, 2007,
+    STATES.append (LottoSource ("New-York", "new-york-lotto", [2015, 2014, 2013, 2012, 2011, 2010, 2009, 2008, 2007,
                                                                2006, 2005, 2004, 2003, 2002, 2001, 2000, 1999, 1998,
                                                                1997, 1996, 1995, 1994, 1993, 1992, 1991, 1990, 1989,
                                                                1988, 1987, 1986, 1985, 1984, 1983, 1982, 1981, 1980,
@@ -672,6 +749,7 @@ if __name__ == "__main__":
     initStates ()
     # Read the saved data into memory and show user what exists
     lotto = initLotto ()
+    
 
     # watchdog
     while (1):
@@ -698,16 +776,20 @@ if __name__ == "__main__":
                 (path, set) = dsGetDownloadInfo ()
                 lotto = getPageData (path, lotto, set)
                 writeMaster (lotto)
-            elif arg == "--gf":
+            elif arg == "--ff":
                 dic = findNumberFrequency (lotto)
                 printNumberFrequency (dic)
-            elif arg == "--findAvg":
+            elif arg == "--fa":
                 dic = findAverageValues (lotto)
+                # NTS add better printing function later
                 for (key, value) in dic.iteritems ():
                     print "%s : %d" % (key, value)
-            elif arg == "--findWeb":
+            elif arg == "--fw":
                 dic = findWebbing (lotto)
                 printWebbing (dic)
+            elif arg == "--drawWeb":
+                dic = findWebbing (lotto)
+                drawWebbing (dic)
             else:
                 continue
 
